@@ -54,11 +54,15 @@ def create_pdf(image_folder, output_pdf):
     with open(output_pdf, "wb") as f:
         f.write(img2pdf.convert(images))
     print(f"[PDF] PDF berhasil dibuat: {output_pdf}")
+def scrape_and_save_chapter(comic_slug, chapter_num, output_folder, convert_slug=False):
+    if convert_slug:
+        formatted_chapter = str(chapter_num).replace('.', '-')
+    else:
+        formatted_chapter = f"{int(chapter_num):02}" if isinstance(chapter_num, float) and chapter_num.is_integer() else str(chapter_num)
 
-def scrape_and_save_chapter(comic_slug, chapter_num, output_folder):
-    # Handle chapter numbers with decimal points (like 39.1 becomes 39-1)
-    formatted_chapter = str(chapter_num).replace('.', '-')
     url = f"https://komikcast02.com/chapter/{comic_slug}-chapter-{formatted_chapter}/"
+ 
+    # ... lanjut scrape logic seperti biasa ...
     print(f"\n[CHAPTER {chapter_num}] Mengakses: {url}")
     
     options = Options()
@@ -81,7 +85,7 @@ def scrape_and_save_chapter(comic_slug, chapter_num, output_folder):
         print(f"[WARNING] Tidak ada gambar ditemukan di {url}.")
         return
     
-    chapter_folder = os.path.join(output_folder, f"chapter_{formatted_chapter.replace('-', '_')}")
+    chapter_folder = os.path.join(output_folder, f"chapter_{formatted_chapter}")
     os.makedirs(chapter_folder, exist_ok=True)
     
     for idx, img_url in enumerate(img_urls):
@@ -96,50 +100,40 @@ def scrape_and_save_chapter(comic_slug, chapter_num, output_folder):
     pdf_output = os.path.join(output_folder, f"{comic_slug}-Chapter-{formatted_chapter}.pdf")
     create_pdf(chapter_folder, pdf_output)
 
+import os
+import re
 def main():
     comic_slug = input("Masukkan judul komik (misal: owari-no-seraph): ").strip()
-    
-    # Ask user for download mode
+
     print("\nPilih mode download:")
     print("1. Download range chapter (misal: chapter 10 sampai 20)")
-    print("2. Download chapter tertentu (pisahkan dengan spasi, misal: 39.1 50.2 60)")
+    print("2. Download chapter tertentu (pisahkan dengan spasi, misal: 165.hq 165.2.lq 39.1)")
     choice = input("Masukkan pilihan (1/2): ").strip()
-    
+
     output_folder = f"{comic_slug}_PDFs"
     os.makedirs(output_folder, exist_ok=True)
 
     if choice == '1':
-        # Range mode
         start_chapter = float(input("Masukkan chapter awal: ").strip())
         end_chapter = float(input("Masukkan chapter akhir: ").strip())
-        
-        # Handle integer and float chapters
-        if start_chapter.is_integer() and end_chapter.is_integer():
-            for chapter in range(int(start_chapter), int(end_chapter) + 1):
-                scrape_and_save_chapter(comic_slug, chapter, output_folder)
-        else:
-            current = start_chapter
-            while current <= end_chapter:
-                scrape_and_save_chapter(comic_slug, current, output_folder)
-                current = round(current + 0.1, 1)  # Increment by 0.1 for decimal chapters
-    
-    elif choice == '2':
-        # Specific chapters mode
-        chapters_input = input("Masukkan chapter yang ingin didownload (pisahkan dengan spasi, misal: 39.1 50.2 60): ").strip()
-        chapters = chapters_input.split()
-        
-        for chapter in chapters:
-            try:
-                chapter_num = float(chapter)
-                scrape_and_save_chapter(comic_slug, chapter_num, output_folder)
-            except ValueError:
-                print(f"[ERROR] '{chapter}' bukan format chapter yang valid. Dilewati.")
-    
-    else:
-        print("[ERROR] Pilihan tidak valid. Harap pilih 1 atau 2.")
-        return
 
-    print("\nScraping selesai!")
+        current = start_chapter
+        while current <= end_chapter:
+            scrape_and_save_chapter(comic_slug, current, output_folder, convert_slug=False)
+            current = round(current + 1 if current.is_integer() else 0.1, 1)
+
+    elif choice == '2':
+        chapters_input = input("Masukkan chapter yang ingin didownload (pisahkan dengan spasi): ").strip()
+        chapters = chapters_input.split()
+
+        for chapter in chapters:
+            # Validasi minimal
+            if re.match(r'^[\d\.a-zA-Z]+$', chapter):
+                scrape_and_save_chapter(comic_slug, chapter.strip(), output_folder, convert_slug=True)
+            else:
+                print(f"[ERROR] Format tidak valid: '{chapter}', dilewati.")
+    else:
+        print("[ERROR] Pilihan tidak valid.")
 
 if __name__ == "__main__":
     main()
