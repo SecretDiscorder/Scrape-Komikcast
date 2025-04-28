@@ -43,17 +43,54 @@ def compress_image(input_path, output_path, quality=30):
         img.save(output_path, "JPEG", quality=quality)
     os.remove(input_path)
     print(f"[COMPRESS] Disimpan: {output_path}")
+from PIL import Image
+
+import re
+
+import os
+import re
+from PIL import Image
+import img2pdf
 
 def create_pdf(image_folder, output_pdf):
-    """ Membuat PDF dari semua gambar dalam folder """
     print(f"[PDF] Membuat PDF dari folder: {image_folder}")
-    images = [os.path.join(image_folder, img) for img in sorted(os.listdir(image_folder)) if img.lower().endswith((".jpg", ".jpeg", ".png"))]
-    if not images:
-        print(f"[ERROR] Tidak ada gambar ditemukan. PDF tidak dibuat!")
+
+    # Fungsi untuk mengekstrak nomor urut dari nama file jika ada
+    def extract_number(filename):
+        match = re.search(r'(\d+)', filename)
+        return int(match.group(1)) if match else float('inf')
+
+    # Mengambil semua gambar dengan ekstensi yang sesuai dan mengurutkannya secara alfabet
+    image_paths = sorted([
+        os.path.join(image_folder, img)
+        for img in os.listdir(image_folder)
+        if img.lower().endswith((".jpg", ".jpeg", ".png"))
+    ], key=lambda x: extract_number(os.path.basename(x)))
+
+    # Pastikan gambar yang ditemukan tidak kosong
+    if not image_paths:
+        print("[ERROR] Tidak ada gambar valid ditemukan.")
         return
-    with open(output_pdf, "wb") as f:
-        f.write(img2pdf.convert(images))
-    print(f"[PDF] PDF berhasil dibuat: {output_pdf}")
+
+    # Daftar untuk menyimpan gambar yang akan dimasukkan ke dalam PDF
+    images = []
+    for img_path in image_paths:
+        try:
+            img = Image.open(img_path)
+            img = img.convert("RGB")  # Mengonversi gambar ke mode RGB
+            images.append(img)
+        except Exception as e:
+            print(f"[ERROR] Gagal membuka gambar {img_path}: {e}")
+
+    # Membuat PDF
+    try:
+        images[0].save(output_pdf, save_all=True, append_images=images[1:])
+        print(f"[PDF] PDF berhasil dibuat: {output_pdf}")
+    except Exception as e:
+        print(f"[ERROR] Gagal membuat PDF: {e}")
+
+# Tes fungsi dengan folder dan output PDF
+
 def scrape_and_save_chapter(comic_slug, chapter_num, output_folder, convert_slug=False):
     if convert_slug:
         formatted_chapter = str(chapter_num).replace('.', '-')

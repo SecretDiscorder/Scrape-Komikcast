@@ -46,33 +46,51 @@ def compress_image(input_path, output_path, quality=30):
         print(f"[SKIP] Gambar dilewati dan dihapus.")
 from PIL import Image
 
+import re
+
+import os
+import re
+from PIL import Image
+import img2pdf
+
 def create_pdf(image_folder, output_pdf):
     print(f"[PDF] Membuat PDF dari folder: {image_folder}")
+
+    # Fungsi untuk mengekstrak nomor urut dari nama file jika ada
+    def extract_number(filename):
+        match = re.search(r'(\d+)', filename)
+        return int(match.group(1)) if match else float('inf')
+
+    # Mengambil semua gambar dengan ekstensi yang sesuai dan mengurutkannya secara alfabet
     image_paths = sorted([
         os.path.join(image_folder, img)
         for img in os.listdir(image_folder)
         if img.lower().endswith((".jpg", ".jpeg", ".png"))
-    ])
+    ], key=lambda x: extract_number(os.path.basename(x)))
 
+    # Pastikan gambar yang ditemukan tidak kosong
+    if not image_paths:
+        print("[ERROR] Tidak ada gambar valid ditemukan.")
+        return
+
+    # Daftar untuk menyimpan gambar yang akan dimasukkan ke dalam PDF
     images = []
     for img_path in image_paths:
         try:
             img = Image.open(img_path)
-            img = img.convert("RGB")
+            img = img.convert("RGB")  # Mengonversi gambar ke mode RGB
             images.append(img)
         except Exception as e:
-            print(f"[SKIP] Gagal membuka {img_path}: {e}")
+            print(f"[ERROR] Gagal membuka gambar {img_path}: {e}")
 
-    if not images:
-        print("[ERROR] Tidak ada gambar valid.")
-        return
-
+    # Membuat PDF
     try:
         images[0].save(output_pdf, save_all=True, append_images=images[1:])
         print(f"[PDF] PDF berhasil dibuat: {output_pdf}")
     except Exception as e:
         print(f"[ERROR] Gagal membuat PDF: {e}")
 
+# Tes fungsi dengan folder dan output PDF
 
 
 def scrape_and_save_chapter(comic_slug, chapter_num, output_folder, convert_slug=False):
