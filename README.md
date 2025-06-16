@@ -1,1 +1,1 @@
-pip install selenium img2pdf requests==1.26
+pip install selenium img2pdf requests==1.26 yt-dlp bs4
